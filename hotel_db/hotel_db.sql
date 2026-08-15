@@ -52,29 +52,30 @@ CREATE TABLE IF NOT EXISTS bookings (
   id SERIAL PRIMARY KEY,
   client_id INTEGER NOT NULL REFERENCES clients (id) ON UPDATE CASCADE ON DELETE RESTRICT,
   room_id INTEGER NOT NULL REFERENCES rooms (id) ON UPDATE CASCADE ON DELETE RESTRICT,
-  stay_period DATERANGE NOT NULL CHECK (NOT isempty(stay_period)),
+  move_in_date DATE NOT NULL,
+  move_out_date DATE NOT NULL CHECK (move_out_date > move_in_date),
   -- єдина проблема може виникнути з пересіченням діапазону дат, але я не знаю, як її уникнути
   rating NUMERIC(2, 1) CHECK (rating BETWEEN 0 AND 5)
 );
 
-INSERT INTO bookings (client_id, room_id, stay_period, rating)
+INSERT INTO bookings (client_id, room_id, move_in_date, move_out_date, rating)
 VALUES
-    (1, 1, daterange(CURRENT_DATE - 30, CURRENT_DATE - 25, '[)'), 4.5),
-    (2, 2, daterange(CURRENT_DATE - 28, CURRENT_DATE - 23, '[)'), 5.0),
-    (3, 4, daterange(CURRENT_DATE - 25, CURRENT_DATE - 20, '[)'), 1.8),
-    (4, 5, daterange(CURRENT_DATE - 22, CURRENT_DATE - 15, '[)'), 2.9),
-    (5, 6, daterange(CURRENT_DATE - 20, CURRENT_DATE - 14, '[)'), 4.7),
-    (6, 7, daterange(CURRENT_DATE - 18, CURRENT_DATE - 12, '[)'), 3.4),
-    (7, 8, daterange(CURRENT_DATE - 15, CURRENT_DATE - 10, '[)'), 4.0),
-    (8, 9, daterange(CURRENT_DATE - 12, CURRENT_DATE - 7, '[)'), 0.9),
-    (1, 1, daterange(CURRENT_DATE - 5, CURRENT_DATE - 2, '[)'), 4.8),
-    (9, 3, daterange(CURRENT_DATE - 2, CURRENT_DATE + 3, '[)'), NULL),
-    (10, 10, daterange(CURRENT_DATE - 1, CURRENT_DATE + 4, '[)'), NULL),
-    (2, 3, daterange(CURRENT_DATE + 5, CURRENT_DATE + 10, '[)'), NULL),
-    (3, 11, daterange(CURRENT_DATE + 7, CURRENT_DATE + 14, '[)'), NULL),
-    (5, 9, daterange(CURRENT_DATE + 12, CURRENT_DATE + 18, '[)'), NULL),
-    (6, 12, daterange(CURRENT_DATE + 15, CURRENT_DATE + 20, '[)'), NULL),
-    (8, 5, daterange(CURRENT_DATE + 22, CURRENT_DATE + 27, '[)'), NULL);
+    (1, 1, CURRENT_DATE - 30, CURRENT_DATE - 25, 4.5),
+    (2, 2, CURRENT_DATE - 28, CURRENT_DATE - 23, 5.0),
+    (3, 4, CURRENT_DATE - 25, CURRENT_DATE - 20, 1.8),
+    (4, 5, CURRENT_DATE - 22, CURRENT_DATE - 15, 2.9),
+    (5, 6, CURRENT_DATE - 20, CURRENT_DATE - 14, 4.7),
+    (6, 7, CURRENT_DATE - 18, CURRENT_DATE - 12, 3.4),
+    (7, 8, CURRENT_DATE - 15, CURRENT_DATE - 10, 4.0),
+    (8, 9, CURRENT_DATE - 12, CURRENT_DATE - 7, 0.9),
+    (1, 1, CURRENT_DATE - 5, CURRENT_DATE - 2, 4.8),
+    (9, 3, CURRENT_DATE - 2, CURRENT_DATE + 3, NULL),
+    (10, 10, CURRENT_DATE - 1, CURRENT_DATE + 4, NULL),
+    (2, 3, CURRENT_DATE + 5, CURRENT_DATE + 10, NULL),
+    (3, 11, CURRENT_DATE + 7, CURRENT_DATE + 14, NULL),
+    (5, 9, CURRENT_DATE + 12, CURRENT_DATE + 18, NULL),
+    (6, 12, CURRENT_DATE + 15, CURRENT_DATE + 20, NULL),
+    (8, 5, CURRENT_DATE + 22, CURRENT_DATE + 27, NULL);
 
 DROP TABLE bookings CASCADE;
 DROP TABLE rooms CASCADE;
