@@ -1,4 +1,4 @@
-CREATE DATABASE fitness
+CREATE DATABASE fitness;
 
 CREATE TABLE IF NOT EXISTS users (
   id SERIAL PRIMARY KEY,
@@ -118,12 +118,6 @@ VALUES
     (9, 3, '2026-06-12', 'single_purchase'),
     (10, 1, '2026-07-05', 'subscription'),
     (10, 6, '2026-07-15', 'single_purchase');
-
-DROP TABLE completions;
-DROP TABLE subscriptions;
-DROP TABLE trainings;
-DROP TABLE trainers;
-DROP TABLE users;
 
 -- 1 Список тренувань конкретного користувача
 

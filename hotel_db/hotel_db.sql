@@ -77,10 +77,6 @@ VALUES
     (6, 12, CURRENT_DATE + 15, CURRENT_DATE + 20, NULL),
     (8, 5, CURRENT_DATE + 22, CURRENT_DATE + 27, NULL);
 
-DROP TABLE bookings CASCADE;
-DROP TABLE rooms CASCADE;
-DROP TABLE clients CASCADE;
-
 -- 1 Відобразити імена та прізвища клієнтів та номери кімнат, які вони бронювали.
 
 SELECT c.first_name || ' ' || c.last_name AS full_name, r.room_number
@@ -203,4 +199,4 @@ SELECT c.first_name || ' ' || c.last_name AS full_name, r.room_number, CASE
   ELSE 'незадовільно'
 END AS rating_description
 FROM clients AS c INNER JOIN bookings AS b ON c.id = b.client_id
-                  INNER JOIN rooms AS r ON r.id = b.room_id
+                  INNER JOIN rooms AS r ON r.id = b.room_id;
