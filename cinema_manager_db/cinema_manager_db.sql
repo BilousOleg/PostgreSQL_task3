@@ -251,7 +251,10 @@ VALUES
     );
 
 -- Запит на отримання усіх акторів причетними до них фільмами, директорами та студіями
-SELECT m.title, a.first_name || ' ' || a.last_name, d.first_name || ' ' || d.last_name, s.studio_name
+SELECT m.title, 
+       a.first_name || ' ' || a.last_name AS actor_full_name, 
+       d.first_name || ' ' || d.last_name AS director_full_name,
+       s.studio_name
 FROM movies AS m INNER JOIN movies_to_actors AS mta ON m.id = mta.movie_id
                  INNER JOIN actors AS a ON mta.actor_id = a.id
                  INNER JOIN directors AS d ON d.id = m.director_id
