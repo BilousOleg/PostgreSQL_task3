@@ -134,22 +134,22 @@ CREATE OR REPLACE FUNCTION check_completion_date()
 RETURNS TRIGGER AS $$
 -- Створення змінної для запису результату
 DECLARE
-    registration_date DATE;
+  registration_date DATE;
 BEGIN
-    SELECT u.registation_date
-    INTO registration_date
-    FROM users AS u
-    WHERE u.id = NEW.user_id;
+  SELECT u.registation_date
+  INTO registration_date
+  FROM users AS u
+  WHERE u.id = NEW.user_id;
 
-    IF NEW.completion_date > CURRENT_TIMESTAMP THEN
-        RAISE EXCEPTION 'Completion date cannot be in the future';
-    END IF;
+  IF NEW.completion_date > CURRENT_TIMESTAMP THEN
+    RAISE EXCEPTION 'Completion date cannot be in the future';
+  END IF;
 
-    IF NEW.completion_date < registration_date THEN
-        RAISE EXCEPTION 'Completion date cannot be before user''s registration date';
-    END IF;
+  IF NEW.completion_date < registration_date THEN
+      RAISE EXCEPTION 'Completion date cannot be before user''s registration date';
+  END IF;
 
-    RETURN NEW;
+  RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 

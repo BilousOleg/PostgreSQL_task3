@@ -89,13 +89,13 @@ CREATE OR REPLACE FUNCTION check_booking_rating()
 RETURNS TRIGGER
 AS $$
 BEGIN
-    IF NEW.rating IS NOT NULL
-       AND CURRENT_DATE < NEW.move_out_date
-    THEN
-        RAISE EXCEPTION 'Rating cannot be set before move-out date';
-    END IF;
+  IF NEW.rating IS NOT NULL
+    AND CURRENT_DATE < NEW.move_out_date 
+  THEN
+    RAISE EXCEPTION 'Rating cannot be set before move-out date';
+  END IF;
 
-    RETURN NEW;
+  RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
