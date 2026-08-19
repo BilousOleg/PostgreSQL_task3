@@ -1,5 +1,7 @@
 CREATE DATABASE hotel;
 
+CREATE EXTENSION IF NOT EXISTS btree_gist;
+
 CREATE TABLE IF NOT EXISTS clients (
   id SERIAL PRIMARY KEY,
   first_name VARCHAR(64) NOT NULL CHECK (first_name <> ''),
@@ -54,12 +56,17 @@ CREATE TABLE IF NOT EXISTS bookings (
   room_id INTEGER NOT NULL REFERENCES rooms (id) ON UPDATE CASCADE ON DELETE RESTRICT,
   move_in_date DATE NOT NULL,
   move_out_date DATE NOT NULL CHECK (move_out_date > move_in_date),
-  -- єдина проблема може виникнути з пересіченням діапазону дат, але я не знаю, як її уникнути
-  rating NUMERIC(2, 1) CHECK (rating BETWEEN 0 AND 5)
+  rating NUMERIC(2, 1) CHECK (rating IS NULL
+                                     OR rating BETWEEN 0 AND 5),
+  EXCLUDE USING GIST (
+      room_id WITH =,
+      daterange(move_in_date, move_out_date, '[)') WITH &&
+  )
 );
 
 INSERT INTO bookings (client_id, room_id, move_in_date, move_out_date, rating)
 VALUES
+    -- (9, 3, CURRENT_DATE - 2, CURRENT_DATE + 3, 4.5), -- Приклад, де проживання ще не закінчено
     (1, 1, CURRENT_DATE - 30, CURRENT_DATE - 25, 4.5),
     (2, 2, CURRENT_DATE - 28, CURRENT_DATE - 23, 5.0),
     (3, 4, CURRENT_DATE - 25, CURRENT_DATE - 20, 1.8),
@@ -76,6 +83,29 @@ VALUES
     (5, 9, CURRENT_DATE + 12, CURRENT_DATE + 18, NULL),
     (6, 12, CURRENT_DATE + 15, CURRENT_DATE + 20, NULL),
     (8, 5, CURRENT_DATE + 22, CURRENT_DATE + 27, NULL);
+
+-- Функція, яка перевіряє запити на розміщення оцінки до виїзду з готелю
+CREATE OR REPLACE FUNCTION check_booking_rating()
+RETURNS TRIGGER
+AS $$
+BEGIN
+  IF NEW.rating IS NOT NULL
+    AND CURRENT_DATE < NEW.move_out_date 
+  THEN
+    RAISE EXCEPTION 'Rating cannot be set before move-out date';
+  END IF;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Триггер, який навішуємо на запити INSERT та UPDATE для перевірки функцією,
+-- який викликається тільки при додаванні/оновленні лише двох полів - rating АБО move_out_date
+CREATE TRIGGER booking_rating_check
+BEFORE INSERT OR UPDATE OF rating, move_out_date
+ON bookings
+FOR EACH ROW
+EXECUTE FUNCTION check_booking_rating();
 
 -- 1 Відобразити імена та прізвища клієнтів та номери кімнат, які вони бронювали.
 
@@ -107,13 +137,13 @@ WHERE c.first_name = 'Іван'
 
 -- 4 Відобразити клієнтів, які мають оцінку нижче 3.5.
 
-SELECT c.first_name || ' ' || c.last_name AS full_name, b.rating
+SELECT DISTINCT c.first_name || ' ' || c.last_name AS full_name, b.rating
 FROM clients AS c INNER JOIN bookings AS b ON c.id = b.client_id
 WHERE b.rating < 3.5;
 
 -- 5 Відобразити клієнтів, які бронювали номер 101 та залишили оцінку.
 
-SELECT c.first_name || ' ' || c.last_name AS full_name, b.rating
+SELECT DISTINCT c.first_name || ' ' || c.last_name AS full_name, b.rating
 FROM clients AS c INNER JOIN bookings AS b ON c.id = b.client_id
                   INNER JOIN rooms AS r ON r.id = b.room_id
 WHERE r.room_number = 101
@@ -143,12 +173,18 @@ WHERE b.id IS NULL;
 
 SELECT c.first_name || ' ' || c.last_name AS full_name
 FROM clients AS c
-WHERE c.birthday IN (
+WHERE (
+-- Порівняння декількох значень (кортежів)
+    EXTRACT(MONTH FROM c.birthday),
+    EXTRACT(DAY FROM c.birthday)
+) IN (
 -- IN для того, щоб уникнути того, що Іванів Іваненків буде декілька
-  SELECT c.birthday
-  FROM clients AS c
-  WHERE c.first_name = 'Іван'
-    AND c.last_name = 'Іваненко'
+    SELECT
+        EXTRACT(MONTH FROM c.birthday),
+        EXTRACT(DAY FROM c.birthday)
+    FROM clients AS c
+    WHERE c.first_name = 'Іван'
+      AND c.last_name = 'Іваненко'
 );
 
 -- 10 Відобразити клієнтів, які мають середню оцінку вищу, ніж Іван Іваненко.

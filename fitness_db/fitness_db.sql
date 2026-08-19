@@ -41,7 +41,7 @@ CREATE TYPE training_category AS ENUM ('йога', 'силові', 'кардіо
 
 CREATE TABLE IF NOT EXISTS trainings (
   id SERIAL PRIMARY KEY,
-  trainer_id INTEGER REFERENCES trainers(id) ON UPDATE CASCADE ON DELETE RESTRICT,
+  trainer_id INTEGER NOT NULL REFERENCES trainers(id) ON UPDATE CASCADE ON DELETE RESTRICT,
   training_name VARCHAR(128) NOT NULL CHECK (training_name <> ''),
   training_type training_category NOT NULL,
   duration SMALLINT NOT NULL CHECK (duration > 0),
@@ -70,21 +70,23 @@ CREATE TABLE IF NOT EXISTS subscriptions (
   duration_months SMALLINT NOT NULL CHECK (duration_months > 0),
   price_per_month NUMERIC (7, 2) NOT NULL CHECK (price_per_month >= 0),
   start_date DATE NOT NULL,
-  end_date DATE NOT NULL CHECK (end_date > start_date)
+  end_date DATE GENERATED ALWAYS AS (
+        start_date + (duration_months * INTERVAL '1 month')
+    ) STORED
 );
 
-INSERT INTO subscriptions (user_id, duration_months, price_per_month, start_date, end_date)
+INSERT INTO subscriptions (user_id, duration_months, price_per_month, start_date)
 VALUES
-    (1, 1, 500.00, CURRENT_DATE, CURRENT_DATE + 14),
-    (2, 12, 350.00, '2026-01-15', '2027-01-15'),
-    (3, 3, 450.00, CURRENT_DATE, CURRENT_DATE + 21),
-    (4, 1, 500.00, '2026-02-20', '2026-03-20'),
-    (5, 6, 400.00, '2026-03-01', '2026-09-01'),
-    (6, 12, 350.00, '2026-03-10', '2027-03-10'),
-    (7, 1, 500.00, '2026-04-05', '2026-05-05'),
-    (8, 3, 450.00, '2026-05-01', '2026-08-01'),
-    (9, 6, 400.00, '2026-06-01', '2026-12-01'),
-    (10, 1, 500.00, '2026-07-01', '2026-08-01');
+    (1, 1, 500.00, CURRENT_DATE),
+    (2, 12, 350.00, '2026-01-15'),
+    (3, 3, 450.00, CURRENT_DATE),
+    (4, 1, 500.00, '2026-02-20'),
+    (5, 6, 400.00, '2026-03-01'),
+    (6, 12, 350.00, '2026-03-10'),
+    (7, 1, 500.00, '2026-04-05'),
+    (8, 3, 450.00, '2026-05-01'),
+    (9, 6, 400.00, '2026-06-01'),
+    (10, 1, 500.00, '2026-07-01');
 
 CREATE TYPE access_type AS ENUM ('subscription', 'single_purchase');
 
@@ -92,32 +94,72 @@ CREATE TABLE IF NOT EXISTS completions (
     id SERIAL PRIMARY KEY,
     user_id INTEGER NOT NULL REFERENCES users(id) ON UPDATE CASCADE ON DELETE RESTRICT,
     training_id INTEGER NOT NULL REFERENCES trainings(id) ON UPDATE CASCADE ON DELETE RESTRICT,
-    completion_date DATE NOT NULL,
+    completion_date TIMESTAMP NOT NULL,
     access_type access_type NOT NULL
 );
 
-INSERT INTO completions (user_id, training_id, completion_date, access_type)
+INSERT INTO completions (
+    user_id,
+    training_id,
+    completion_date,
+    access_type
+)
 VALUES
-    (1, 1, CURRENT_DATE, 'subscription'),
-    (1, 3, CURRENT_DATE, 'subscription'),
-    (2, 5, CURRENT_DATE - 2, 'subscription'),
-    (2, 9, CURRENT_DATE - 3, 'subscription'),
-    (3, 3, CURRENT_DATE - 4, 'subscription'),
-    (3, 7, CURRENT_DATE - 5, 'subscription'),
-    (4, 1, '2026-02-25', 'subscription'),
-    (4, 10, CURRENT_DATE - 14, 'single_purchase'),
-    (5, 4, '2026-03-12', 'subscription'),
-    (5, 6, '2026-04-01', 'subscription'),
-    (6, 9, '2026-03-15', 'subscription'),
-    (6, 11, '2026-04-10', 'subscription'),
-    (7, 2, '2026-04-10', 'subscription'),
-    (7, 8, '2026-04-20', 'single_purchase'),
-    (8, 5, '2026-05-10', 'subscription'),
-    (8, 12, '2026-05-15', 'subscription'),
-    (9, 7, '2026-06-05', 'subscription'),
-    (9, 3, '2026-06-12', 'single_purchase'),
-    (10, 1, '2026-07-05', 'subscription'),
-    (10, 6, '2026-07-15', 'single_purchase');
+    -- (1, 1, CURRENT_TIMESTAMP - INTERVAL '1000 days', 'subscription'), -- Тестове додавання для перевірки тригеру
+    -- (1, 1, CURRENT_TIMESTAMP + INTERVAL '1 day', 'subscription'),      -- Тестове додавання для перевірки тригеру
+    (1, 1, CURRENT_TIMESTAMP, 'subscription'),
+    (1, 3, CURRENT_TIMESTAMP, 'subscription'),
+    (2, 5, CURRENT_TIMESTAMP - INTERVAL '2 days', 'subscription'),
+    (2, 9, CURRENT_TIMESTAMP - INTERVAL '3 days', 'subscription'),
+    (3, 3, CURRENT_TIMESTAMP - INTERVAL '4 days', 'subscription'),
+    (3, 7, CURRENT_TIMESTAMP - INTERVAL '5 days', 'subscription'),
+    (4, 1, '2026-02-25 12:00:00', 'subscription'),
+    (4, 10, CURRENT_TIMESTAMP - INTERVAL '14 days', 'single_purchase'),
+    (5, 4, '2026-03-12 12:00:00', 'subscription'),
+    (5, 6, '2026-04-01 12:00:00', 'subscription'),
+    (6, 9, '2026-03-15 12:00:00', 'subscription'),
+    (6, 11, '2026-04-10 12:00:00', 'subscription'),
+    (7, 2, '2026-04-10 12:00:00', 'subscription'),
+    (7, 8, '2026-04-20 12:00:00', 'single_purchase'),
+    (8, 5, '2026-05-10 12:00:00', 'subscription'),
+    (8, 12, '2026-05-15 12:00:00', 'subscription'),
+    (9, 7, '2026-06-05 12:00:00', 'subscription'),
+    (9, 3, '2026-06-12 12:00:00', 'single_purchase'),
+    (10, 1, '2026-07-05 12:00:00', 'subscription'),
+    (10, 6, '2026-07-15 12:00:00', 'single_purchase');
+
+-- Функція для порівняння з поточною датою та датою реєстрації, адже CURRENT_DATE -
+-- динамічне значення, яке змінюється зі зміною дати і його не варто використовувати в CHECK
+CREATE OR REPLACE FUNCTION check_completion_date()
+RETURNS TRIGGER AS $$
+-- Створення змінної для запису результату
+DECLARE
+  registration_date DATE;
+BEGIN
+  SELECT u.registation_date
+  INTO registration_date
+  FROM users AS u
+  WHERE u.id = NEW.user_id;
+
+  IF NEW.completion_date > CURRENT_TIMESTAMP THEN
+    RAISE EXCEPTION 'Completion date cannot be in the future';
+  END IF;
+
+  IF NEW.completion_date < registration_date THEN
+      RAISE EXCEPTION 'Completion date cannot be before user''s registration date';
+  END IF;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Навішування тригера на додавання рядків або зміну user_id (для перевірки нового користувача) 
+-- АБО completion_date
+CREATE TRIGGER completion_date_check
+BEFORE INSERT OR UPDATE OF user_id, completion_date
+ON completions
+FOR EACH ROW
+EXECUTE FUNCTION check_completion_date();
 
 -- 1 Список тренувань конкретного користувача
 
@@ -130,27 +172,30 @@ WHERE u.id = 1; -- Обираю певного користувача за йо�
 
 SELECT DISTINCT t.training_name, t.training_type, t.duration
 FROM trainings AS t INNER JOIN completions AS c ON t.id = c.training_id
-WHERE c.completion_date = CURRENT_DATE;
+WHERE c.completion_date >= CURRENT_DATE
+  AND c.completion_date < CURRENT_DATE + INTERVAL '1 day';
 
 -- 3 Перелік тренувань за тиждень
 
 -- Якщо тиждень - це проміжок в 7 днів
 SELECT DISTINCT t.training_name, t.training_type, t.duration
 FROM trainings AS t INNER JOIN completions AS c ON t.id = c.training_id
-WHERE c.completion_date >= CURRENT_DATE - 6;
+WHERE c.completion_date >= CURRENT_DATE - INTERVAL '6 days'
+  AND c.completion_date < CURRENT_DATE + INTERVAL '1 day';
 
 -- Якщо мається на увазі саме поточний тиждень
 SELECT DISTINCT t.training_name, t.training_type, t.duration
 FROM trainings AS t INNER JOIN completions AS c ON t.id = c.training_id
-WHERE c.completion_date >= DATE_TRUNC('week', CURRENT_DATE)::DATE
-  AND c.completion_date < (DATE_TRUNC('week', CURRENT_DATE) + INTERVAL '1 week')::DATE;
+WHERE c.completion_date >= DATE_TRUNC('week', CURRENT_TIMESTAMP)
+  AND c.completion_date < (DATE_TRUNC('week', CURRENT_TIMESTAMP) + INTERVAL '1 week');
 
 -- 4 Загальний дохід за день
 
 -- Якщо враховувати тільки купування окремих тренувань
 SELECT COALESCE(SUM(t.price), 0) AS total_income
 FROM trainings AS t INNER JOIN completions AS c ON t.id = c.training_id
-WHERE c.completion_date = CURRENT_DATE
+WHERE c.completion_date >= CURRENT_DATE
+  AND c.completion_date < CURRENT_DATE + INTERVAL '1 day'
   AND c.access_type = 'single_purchase';
 
 -- Якщо також врахувати підписки
@@ -158,7 +203,8 @@ SELECT
     COALESCE((
         SELECT SUM(t.price)
         FROM trainings AS t INNER JOIN completions AS c ON t.id = c.training_id
-        WHERE c.completion_date = CURRENT_DATE
+        WHERE c.completion_date >= CURRENT_DATE
+          AND c.completion_date < CURRENT_DATE + INTERVAL '1 day'
           AND c.access_type = 'single_purchase'
     ), 0)
     +
@@ -173,8 +219,8 @@ SELECT
 -- Якщо враховувати тільки купування окремих тренувань
 SELECT COALESCE(SUM(t.price), 0) AS total_income
 FROM trainings AS t INNER JOIN completions AS c ON t.id = c.training_id
-WHERE c.completion_date >= DATE_TRUNC('month', CURRENT_DATE)::DATE
-  AND c.completion_date < (DATE_TRUNC('month', CURRENT_DATE) + INTERVAL '1 month')::DATE
+WHERE c.completion_date >= DATE_TRUNC('month', CURRENT_TIMESTAMP)
+  AND c.completion_date < (DATE_TRUNC('month', CURRENT_TIMESTAMP) + INTERVAL '1 month')
   AND c.access_type = 'single_purchase';
 
 -- Якщо також врахувати підписки
@@ -182,8 +228,8 @@ SELECT
     COALESCE((
         SELECT SUM(t.price)
         FROM trainings AS t INNER JOIN completions AS c ON t.id = c.training_id
-        WHERE c.completion_date >= DATE_TRUNC('month', CURRENT_DATE)::DATE
-          AND c.completion_date < (DATE_TRUNC('month', CURRENT_DATE) + INTERVAL '1 month')::DATE
+        WHERE c.completion_date >= DATE_TRUNC('month', CURRENT_TIMESTAMP)
+          AND c.completion_date < (DATE_TRUNC('month', CURRENT_TIMESTAMP) + INTERVAL '1 month')
           AND c.access_type = 'single_purchase'
     ), 0)
     +
@@ -198,8 +244,8 @@ SELECT
 
 SELECT DISTINCT u.first_name, u.last_name
 FROM users AS u INNER JOIN completions AS c ON u.id = c.user_id
-WHERE c.completion_date >= DATE_TRUNC('month', CURRENT_DATE)::DATE
-  AND c.completion_date < (DATE_TRUNC('month', CURRENT_DATE) + INTERVAL '1 month')::DATE;
+WHERE c.completion_date >= DATE_TRUNC('month', CURRENT_TIMESTAMP)
+  AND c.completion_date < (DATE_TRUNC('month', CURRENT_TIMESTAMP) + INTERVAL '1 month');
 
 -- 7 Топ 5 найпопулярніших тренувань
 
@@ -223,8 +269,8 @@ SELECT
     COALESCE((
         SELECT SUM(t.price)
         FROM trainings AS t INNER JOIN completions AS c ON t.id = c.training_id
-        WHERE c.completion_date >= DATE_TRUNC('month', CURRENT_DATE)::DATE
-          AND c.completion_date < (DATE_TRUNC('month', CURRENT_DATE) + INTERVAL '1 month')::DATE
+        WHERE c.completion_date >= DATE_TRUNC('month', CURRENT_TIMESTAMP)
+          AND c.completion_date < (DATE_TRUNC('month', CURRENT_TIMESTAMP) + INTERVAL '1 month')
           AND c.access_type = 'single_purchase'
     ), 0)
     +
