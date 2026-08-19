@@ -64,10 +64,6 @@ CREATE TABLE IF NOT EXISTS bookings (
   )
 );
 
-DROP TABLE bookings CASCADE;
-DROP TABLE rooms CASCADE;
-DROP TABLE clients CASCADE;
-
 INSERT INTO bookings (client_id, room_id, move_in_date, move_out_date, rating)
 VALUES
     -- (9, 3, CURRENT_DATE - 2, CURRENT_DATE + 3, 4.5), -- Приклад, де проживання ще не закінчено
